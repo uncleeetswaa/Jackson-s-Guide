@@ -37,6 +37,7 @@
   .sets { display: flex; gap: 0.4rem; margin-top: 0.55rem; }
   .sets button { flex: 1; height: 2.6rem; border-radius: 0.7rem; border: 1px solid var(--line); background: transparent; }
   .sets button.on { background: var(--copper); color: var(--ink); border-color: var(--copper); }
+  a.how { color: var(--copper); font-weight: 650; text-decoration: none; white-space: nowrap; }
   .pill { height: 2.4rem; border-radius: 999px; border: 0; background: var(--copper); color: var(--ink); padding: 0 0.9rem; font-weight: 650; }
   #arena { position: relative; width: 100%; height: 52vh; min-height: 16rem; border-radius: 1.4rem; border: 1px solid var(--line); background: #0c0b09; overflow: hidden; touch-action: none; }
   .lives i { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 99px; background: var(--line); margin-left: 0.25rem; }
@@ -80,7 +81,25 @@ const PRIZES = [
   {id:"classic",name:"Jackson Classic",need:"11+",detail:"Run the block through the deload. Don't restart because a Tuesday was messy."},
   {id:"anvil",name:"The Anvil",need:"14+",detail:"One extra set on each main lift, except short days and deload weeks."}
 ];
-const RANK = ["badge","plate","ember","classic","anvil"];
+const CUE = {
+  squat: "Sit down between your heels. Knees track over the middle of the feet.",
+  hinge: "Hips go back, back stays long, and the weight stays close.",
+  hpush: "Shoulder blades stay set. Lower until the chest or the elbows do the work.",
+  hpull: "Pull the elbow toward the hip. Don't shrug the load up.",
+  vpush: "Ribs down. Press overhead, not into a backbend.",
+  vpull: "Start from a hang if you can. Elbows down, chest toward the bar.",
+  lunge: "Tall torso. Front heel stays down. Push the floor away to stand.",
+  thrust: "Chin tucked. Squeeze the glutes at the top and pause.",
+  core: "Ribs down, slow reps. On a plank, a straight line, and keep breathing.",
+  lateral: "Raise to shoulder height. Stop before you shrug.",
+  curl: "Elbows stay near the ribs. Only the forearm moves.",
+  tri: "Upper arm still. Only the elbow hinges.",
+  calf: "Pause at the top. Let the heel drop. Don't bounce.",
+  carry: "Stay tall. Short quiet steps. Stop before your posture folds."
+};
+function howTo(name) {
+  return "https://www.youtube.com/results?search_query=" + encodeURIComponent(name + " proper form");
+}
 const state = load();
 let step = 0;
 let editing = false;
@@ -151,7 +170,7 @@ function buildPlan(p) {
       const name = s[2]==="b" && names[1] ? names[1] : names[0];
       const reps = p.level==="new" ? (s[1]==="main"?"8–12":"10–15") : ((p.goal==="build"||p.goal==="gain") && s[1]==="main" ? "6–10" : s[1]==="main" ? "8–12" : "10–15");
       const rest = s[1]==="main" ? (p.frame==="hard"?180:150) : 90;
-      return {name, sets, reps, rest, muscle: MUSCLE[s[0]], id: bp.name+"-"+n};
+      return {name, sets, reps, rest, muscle: MUSCLE[s[0]], cue: CUE[s[0]], id: bp.name+"-"+n};
     });
     sessions[daysIdx[i]] = {name: bp.name, focus: bp.focus, items, short: slot.short, minutes: slot.short?35:50};
   });
@@ -182,8 +201,7 @@ function render() {
   bindApp();
 }
 function shell(plan) {
-  const i = weekday();
-  const session = plan.sessions[i];
+  const session = plan.sessions[weekday()];
   let body = "";
   if (tab==="today") body = todayView(plan, session);
   if (tab==="week") body = weekView(plan);
@@ -197,18 +215,17 @@ function dock() {
   </nav></div>`;
 }
 function todayView(plan, session) {
-  const d = new Date();
-  const label = d.toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"short"});
+  const label = new Date().toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"short"});
   const pace = paceText(plan.weekly);
-  let lifts = "";
+  let lifts = `<div class="card">Rest. Same protein. Walk if you want, then leave it.</div>`;
   if (session) {
     lifts = session.items.map(item => {
       const key = today()+"|"+item.id;
       const done = state.logs[key]||0;
       const dots = Array.from({length:item.sets}, (_,n)=>`<button data-log="${esc(key)}" data-i="${n}" data-sets="${item.sets}" class="${done>n?"on":""}">${n+1}</button>`).join("");
-      return `<div class="card"><b>${esc(item.name)}</b><div class="muted">${item.sets} × ${item.reps} · ${item.rest}s</div><div class="sets">${dots}</div></div>`;
+      return `<div class="card"><div class="row"><b>${esc(item.name)}</b><a class="how" href="${howTo(item.name)}" target="_blank" rel="noopener">Watch how</a></div><div class="muted">${esc(item.cue)}</div><div class="muted">${item.sets} × ${item.reps} · ${item.rest}s</div><div class="sets">${dots}</div></div>`;
     }).join("");
-  } else lifts = `<div class="card">Rest. Same protein. Walk if you want, then leave it.</div>`;
+  }
   const next = plan.sessions[(weekday()+1)%7];
   return `<p class="muted">${label}</p><h1 style="font-size:2.1rem">${session?esc(session.name):"Rest"}</h1>
     <p class="muted">${plan.title?esc(plan.title)+" · ":""}Week ${plan.week}${plan.deload?" · deload":""}</p>
@@ -221,7 +238,7 @@ function weekView(plan) {
   const i = weekday();
   const days = WEEK.map((name, idx) => {
     const s = plan.sessions[idx];
-    const lines = s ? s.items.map(it => `<div class="row"><span>${esc(it.name)}</span><span class="faint">${it.sets}×${it.reps}</span></div>`).join("") : `<p class="muted">Rest</p>`;
+    const lines = s ? s.items.map(it => `<div class="row" style="margin-top:.55rem"><span>${esc(it.name)} <span class="faint">${it.sets}×${it.reps}</span></span><a class="how" href="${howTo(it.name)}" target="_blank" rel="noopener">Watch</a></div><div class="faint">${esc(it.cue)}</div>`).join("") : `<p class="muted">Rest</p>`;
     return `<div class="card"><span class="faint">${name}${idx===i?" · today":""}</span><h2>${s?esc(s.name):"Rest"}</h2>${lines}</div>`;
   }).join("");
   return `<h1 style="font-size:2.1rem">The week</h1><p class="muted">When every set hits the top of the range with reps left, add a little weight next time. Week 6 is a deload.</p>${days}`;
@@ -354,7 +371,7 @@ function startLoop() {
     const angle = Math.cos(sim.phase)*58;
     const hot = Math.abs(angle) < 20;
     if (sim.wasHot && !hot && !sim.latched) {
-      sim.rep++; sim.lives--; sim.latched = false;
+      sim.rep++; sim.lives--;
       const rep = document.getElementById("rep"), word = document.getElementById("word"), lives = document.getElementById("lives");
       if (rep) rep.textContent = Math.min(sim.rep+1,10);
       if (word) word.textContent = "Dropped";
