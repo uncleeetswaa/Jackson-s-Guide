@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jackson's Guide</title>
+<meta name="description" content="A free workout and diet. Open this file in Safari. No login.">
+<style>
+  :root { --bg:#100f0c; --surface:#1b1914; --fg:#f4f0e6; --muted:#a89f90; --faint:#7a7266; --line:#343026; --copper:#e07a3d; --ink:#1a120c; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.45 system-ui, sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  h1, h2 { font-weight: 650; letter-spacing: -0.03em; margin: 0; }
+  .app { max-width: 32rem; margin: 0 auto; min-height: 100dvh; padding: 1.25rem 1.25rem 6.5rem; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+  .kicker { color: var(--copper); letter-spacing: 0.16em; text-transform: uppercase; font-size: 0.75rem; }
+  .muted { color: var(--muted); }
+  .faint { color: var(--faint); }
+  .card { border: 1px solid var(--line); background: var(--surface); border-radius: 1rem; padding: 0.9rem 1rem; margin-top: 0.6rem; }
+  .btn { width: 100%; height: 3.25rem; border: 0; border-radius: 1rem; background: var(--copper); color: var(--ink); font-weight: 700; }
+  .btn:disabled { opacity: 0.4; }
+  .ghost { width: 100%; height: 2.75rem; border: 0; background: transparent; color: var(--muted); }
+  .choice { width: 100%; text-align: left; border-radius: 1rem; border: 1px solid var(--line); background: var(--surface); padding: 0.8rem 1rem; margin-top: 0.45rem; }
+  .choice.on { border-color: var(--copper); background: rgba(224,122,61,.12); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+  .stat { border: 1px solid var(--line); background: var(--surface); border-radius: 1rem; padding: 0.7rem; }
+  .stat b { display: block; font-size: 1.25rem; }
+  .field { display: block; margin-top: 0.7rem; }
+  .field span { color: var(--muted); font-size: 0.9rem; }
+  .field input { width: 100%; height: 3rem; margin-top: 0.25rem; border-radius: 0.8rem; border: 1px solid var(--line); background: var(--surface); padding: 0 0.8rem; }
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(16,15,12,.95); border-top: 1px solid var(--line); }
+  .dock nav { max-width: 32rem; margin: 0 auto; display: flex; }
+  .dock button { flex: 1; height: 4rem; border: 0; background: transparent; color: var(--faint); }
+  .dock button.on { color: var(--copper); }
+  .sets { display: flex; gap: 0.4rem; margin-top: 0.55rem; }
+  .sets button { flex: 1; height: 2.6rem; border-radius: 0.7rem; border: 1px solid var(--line); background: transparent; }
+  .sets button.on { background: var(--copper); color: var(--ink); border-color: var(--copper); }
+  .pill { height: 2.4rem; border-radius: 999px; border: 0; background: var(--copper); color: var(--ink); padding: 0 0.9rem; font-weight: 650; }
+  #arena { position: relative; width: 100%; height: 52vh; min-height: 16rem; border-radius: 1.4rem; border: 1px solid var(--line); background: #0c0b09; overflow: hidden; touch-action: none; }
+  .lives i { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 99px; background: var(--line); margin-left: 0.25rem; }
+  .lives i.on { background: var(--copper); }
+  .hero { height: 11rem; border-radius: 1.2rem; border: 1px solid var(--line); background:
+    radial-gradient(circle at 70% 60%, #e07a3d 0 18px, transparent 19px),
+    linear-gradient(#1a1814, #100f0c); }
+</style>
+</head>
+<body>
+<div id="root" class="app"></div>
+<script>
+const KEY = "jacksons-guide-v1";
+const WEEK = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const MUSCLE = {squat:"Quads",hinge:"Hamstrings",hpush:"Chest",hpull:"Back",vpush:"Shoulders",vpull:"Back",lunge:"Quads",thrust:"Glutes",core:"Core",lateral:"Shoulders",curl:"Biceps",tri:"Triceps",calf:"Calves",carry:"Core"};
+const MOVES = {
+  gym: {squat:["Back squat","Leg press"],hinge:["Romanian deadlift","Trap-bar deadlift"],hpush:["Barbell bench press","Dumbbell incline press"],hpull:["Bent-over row","Seated cable row"],vpush:["Overhead press","Seated dumbbell press"],vpull:["Pull-up","Lat pulldown"],lunge:["Walking lunge","Bulgarian split squat"],thrust:["Barbell hip thrust","Dumbbell hip thrust"],core:["Dead bug"],lateral:["Dumbbell lateral raise"],curl:["Dumbbell curl","Hammer curl"],tri:["Cable pressdown","Overhead cable extension"],calf:["Standing calf raise"],carry:["Farmer carry"]},
+  dumbbells: {squat:["Goblet squat","Dumbbell front squat"],hinge:["Dumbbell Romanian deadlift","Single-leg dumbbell hinge"],hpush:["Dumbbell bench press","Floor press"],hpull:["One-arm dumbbell row","Bent-over dumbbell row"],vpush:["Dumbbell shoulder press","Seated shoulder press"],vpull:["Inverted row","Dumbbell pullover"],lunge:["Reverse lunge","Walking lunge"],thrust:["Dumbbell hip thrust","Single-leg hip bridge"],core:["Dead bug"],lateral:["Dumbbell lateral raise"],curl:["Dumbbell curl","Hammer curl"],tri:["Overhead dumbbell extension","Close-grip floor press"],calf:["Dumbbell calf raise"],carry:["Farmer carry"]},
+  bodyweight: {squat:["Bodyweight squat","Pause squat"],hinge:["Single-leg hip hinge","Good morning"],hpush:["Push-up","Wide push-up"],hpull:["Table inverted row","Backpack row"],vpush:["Pike push-up","Wall pike"],vpull:["Towel door row","Table row"],lunge:["Reverse lunge","Forward lunge"],thrust:["Glute bridge","Single-leg glute bridge"],core:["Forearm plank"],lateral:["Wall slide"],curl:["Towel curl","Backpack curl"],tri:["Close-grip push-up"],calf:["Single-leg calf raise"],carry:["Suitcase carry"]}
+};
+const PLANS = {
+  fullA:{name:"Full body A",focus:"Squat, push, pull",slots:[["squat","main"],["hpush","main"],["hpull","main"],["lunge","acc"],["core","acc"]]},
+  fullB:{name:"Full body B",focus:"Hinge, overhead, pull",slots:[["hinge","main"],["vpush","main"],["vpull","main"],["thrust","acc"],["core","acc"]]},
+  fullC:{name:"Full body C",focus:"Squat, row, press",slots:[["squat","main"],["hpull","main"],["hpush","main"],["carry","acc"],["core","acc"]]},
+  upperA:{name:"Upper",focus:"Press and row",slots:[["hpush","main"],["hpull","main"],["vpush","main"],["vpull","acc"],["lateral","acc"],["curl","acc"]]},
+  upperB:{name:"Upper B",focus:"Overhead and pull",slots:[["vpush","main"],["vpull","main"],["hpush","acc","b"],["hpull","acc","b"],["tri","acc"],["core","acc"]]},
+  lowerA:{name:"Lower",focus:"Squat and hinge",slots:[["squat","main"],["hinge","main"],["lunge","acc"],["thrust","acc"],["calf","acc"]]},
+  lowerB:{name:"Lower B",focus:"Hinge and single leg",slots:[["hinge","main"],["squat","main","b"],["lunge","acc","b"],["thrust","acc"],["core","acc"]]},
+  pushA:{name:"Push",focus:"Chest, shoulders, triceps",slots:[["hpush","main"],["vpush","main"],["hpush","acc","b"],["lateral","acc"],["tri","acc"]]},
+  pushB:{name:"Push B",focus:"Shoulders first",slots:[["vpush","main"],["hpush","main"],["lateral","acc"],["tri","acc","b"],["core","acc"]]},
+  pullA:{name:"Pull",focus:"Back and biceps",slots:[["hpull","main"],["vpull","main"],["hpull","acc","b"],["curl","acc"],["carry","acc"]]},
+  pullB:{name:"Pull B",focus:"Vertical pull first",slots:[["vpull","main"],["hpull","main"],["curl","acc","b"],["core","acc"]]},
+  legsA:{name:"Legs",focus:"Quads, hamstrings, glutes",slots:[["squat","main"],["hinge","main"],["lunge","acc"],["calf","acc"],["core","acc"]]},
+  legsB:{name:"Legs B",focus:"Hinge and glutes",slots:[["hinge","main"],["squat","main","b"],["thrust","acc"],["lunge","acc","b"],["calf","acc"]]}
+};
+const INDEX = {2:[0,3],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,4,5],6:[0,1,2,3,4,5]};
+const PRIZES = [
+  {id:"badge",name:"Foundry badge",need:"Under 5",detail:"A mark only. The lifting stays the same."},
+  {id:"plate",name:"Iron plate",need:"5+",detail:"When every set hits the top of the range with reps left, add 2.5 kg next time."},
+  {id:"ember",name:"Ember week",need:"8+",detail:"This week gets a name. Same sessions."},
+  {id:"classic",name:"Jackson Classic",need:"11+",detail:"Run the block through the deload. Don't restart because a Tuesday was messy."},
+  {id:"anvil",name:"The Anvil",need:"14+",detail:"One extra set on each main lift, except short days and deload weeks."}
+];
+const RANK = ["badge","plate","ember","classic","anvil"];
+const state = load();
+let step = 0;
+let editing = false;
+let tab = "today";
+let swing = null;
+let eatMode = "simple";
+function load() {
+  try { return Object.assign({profile:null,started:today(),offset:0,weights:[],logs:{},prize:null,best:0}, JSON.parse(localStorage.getItem(KEY) || "{}")); }
+  catch { return {profile:null,started:today(),offset:0,weights:[],logs:{},prize:null,best:0}; }
+}
+function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
+function today() { const d = new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function weekday() { return (new Date().getDay()+6)%7; }
+function daysBetween(a,b){ const p=s=>s.split("-").map(Number); const [ay,am,ad]=p(a), [by,bm,bd]=p(b); return Math.round((Date.UTC(by,bm-1,bd)-Date.UTC(ay,am-1,ad))/86400000); }
+function esc(s){ return String(s).replace(/&/g,"&"+"amp;").replace(/</g,"&"+"lt;").replace(/>/g,"&"+"gt;").replace(/"/g,"&"+"quot;"); }
+function schedule(level, days, frame) {
+  const full = ids => ids.map(id => ({id, short:false}));
+  if (days <= 2) return full(["fullA","fullB"].slice(0, days));
+  if (level === "new") {
+    if (days === 3) return full(["fullA","fullB","fullC"]);
+    if (days === 4) return [...full(["fullA","fullB","fullC"]), {id:"upperA", short:true}];
+    if (days === 5) return [...full(["fullA","fullB","fullC"]), {id:"upperA", short:true}, {id:"lowerA", short:true}];
+    return [...full(["fullA","fullB","fullC"]), {id:"upperA", short:true}, {id:"lowerA", short:true}, {id:"fullA", short:true}];
+  }
+  if (days === 3) return frame === "hard" ? full(["fullA","fullB","fullC"]) : full(["pushA","pullA","legsA"]);
+  if (days === 4) return full(["upperA","lowerA","upperB","lowerB"]);
+  if (days === 5) return frame === "hard" ? [...full(["upperA","lowerA","upperB","lowerB"]), {id:"fullA", short:true}] : full(["pushA","pullA","legsA","upperA","lowerA"]);
+  if (frame === "hard") return [...full(["upperA","lowerA","upperB","lowerB"]), {id:"pushA", short:true}, {id:"pullA", short:true}];
+  if (level === "some") return full(["upperA","lowerA","pushA","pullA","legsA","upperB"]);
+  return full(["pushA","pullA","legsA","pushB","pullB","legsB"]);
+}
+function shift(p) {
+  const t = {cut:{hard:-0.12,athletic:-0.18,easy:-0.2,unsure:-0.16},build:{hard:0.15,athletic:0.1,easy:0.06,unsure:0.1},gain:{hard:0.2,athletic:0.14,easy:0.08,unsure:0.12},recomp:{hard:0.05,athletic:0,easy:-0.1,unsure:-0.05}};
+  return t[p.goal][p.frame];
+}
+function buildPlan(p) {
+  const elapsed = Math.max(0, daysBetween(state.started, today()));
+  const week = Math.floor(elapsed/7)+1;
+  const deload = week % 6 === 0;
+  const bmr = Math.round(p.sex==="male" ? 10*p.weightKg+6.25*p.heightCm-5*p.age+5 : 10*p.weightKg+6.25*p.heightCm-5*p.age-161);
+  const mult = (p.life==="desk"?1.4:p.life==="feet"?1.55:1.72) + (p.days-3)*0.025;
+  const tdee = Math.round((bmr*mult)/10)*10;
+  let delta = tdee*shift(p);
+  if (delta < -700) delta = -700;
+  if (p.goal==="build" && delta>400) delta = 400;
+  if (p.goal==="gain" && delta>600) delta = 600;
+  if (p.goal==="recomp") delta = Math.max(-400, Math.min(250, delta));
+  let kcal = tdee + delta + (state.offset||0);
+  const floor = p.sex==="male"?1600:1400;
+  if (kcal < floor) kcal = floor;
+  kcal = Math.round(kcal/10)*10;
+  const ppk = (p.goal==="cut"||p.goal==="recomp") ? (p.frame==="easy"?2.2:p.frame==="hard"?1.8:2) : (p.goal==="gain" && p.frame==="hard" ? 1.6 : p.frame==="easy" && p.goal!=="gain" ? 2 : 1.8);
+  const protein = Math.round(ppk*p.weightKg);
+  let fat = Math.round((p.goal==="cut"&&p.frame==="easy"?0.85:0.8)*p.weightKg);
+  let carbs = Math.round((kcal - protein*4 - fat*9)/4);
+  if (carbs < 0) carbs = 0;
+  const slots = schedule(p.level, p.days, p.frame);
+  const daysIdx = INDEX[Math.min(6, Math.max(2, slots.length))];
+  const sessions = Array(7).fill(null);
+  slots.forEach((slot, i) => {
+    const bp = PLANS[slot.id];
+    const items = bp.slots.map((s, n) => {
+      let sets = s[1]==="main" ? 3 : p.level==="trained" ? 3 : 2;
+      if (slot.short && s[1]!=="main") sets = Math.max(1, sets-1);
+      if (state.prize==="anvil" && s[1]==="main" && !slot.short && !deload) sets += 1;
+      if (deload) sets = Math.max(1, Math.round(sets/2));
+      const names = MOVES[p.gear][s[0]];
+      const name = s[2]==="b" && names[1] ? names[1] : names[0];
+      const reps = p.level==="new" ? (s[1]==="main"?"8–12":"10–15") : ((p.goal==="build"||p.goal==="gain") && s[1]==="main" ? "6–10" : s[1]==="main" ? "8–12" : "10–15");
+      const rest = s[1]==="main" ? (p.frame==="hard"?180:150) : 90;
+      return {name, sets, reps, rest, muscle: MUSCLE[s[0]], id: bp.name+"-"+n};
+    });
+    sessions[daysIdx[i]] = {name: bp.name, focus: bp.focus, items, short: slot.short, minutes: slot.short?35:50};
+  });
+  const title = state.prize==="ember" ? "Ember week" : state.prize==="classic" ? "Jackson Classic" : state.prize==="anvil" ? "The Anvil" : "";
+  return {bmr, tdee, kcal, protein, fat, carbs, week, deload, title, sessions, weekly: ((kcal-tdee)*7)/7700};
+}
+function meals(plan) {
+  const p = plan.protein, c = plan.carbs;
+  const eggs = Math.min(3, Math.max(2, Math.round((p*0.28)/6.5)));
+  const chicken = Math.round((p*0.32)/0.31/10)*10;
+  const rice = Math.round((c*0.34)/0.28/10)*10;
+  const yogurt = Math.round((p*0.12)/0.1/10)*10;
+  return [
+    ["Breakfast", eggs+" eggs, fruit, and a fist of oats"],
+    ["Lunch", chicken+" g chicken, "+rice+" g cooked rice, a pile of veg"],
+    ["Dinner", "Palm of lean protein, two fists of veg, one fist of potato or rice"],
+    ["Snack", yogurt+" g yoghurt or a protein shake"]
+  ];
+}
+const draft = {sex:null,age:"30",height:"170",weight:"75",frame:null,goal:null,level:null,days:3,gear:null,life:null};
+function root(){ return document.getElementById("root"); }
+function render() {
+  const r = root();
+  if (!state.profile || editing) { r.innerHTML = onboard(); bindOnboard(); return; }
+  if (swing) { r.innerHTML = swingView(); bindSwing(); return; }
+  const plan = buildPlan(state.profile);
+  r.innerHTML = shell(plan) + dock();
+  bindApp();
+}
+function shell(plan) {
+  const i = weekday();
+  const session = plan.sessions[i];
+  let body = "";
+  if (tab==="today") body = todayView(plan, session);
+  if (tab==="week") body = weekView(plan);
+  if (tab==="eat") body = eatView(plan);
+  if (tab==="you") body = youView();
+  return `<header class="row"><strong>Jackson's Guide</strong><button class="pill" id="prize">Prize</button></header>${body}`;
+}
+function dock() {
+  return `<div class="dock"><nav>
+    ${["today","week","eat","you"].map(id => `<button data-tab="${id}" class="${tab===id?"on":""}">${id[0].toUpperCase()+id.slice(1)}</button>`).join("")}
+  </nav></div>`;
+}
+function todayView(plan, session) {
+  const d = new Date();
+  const label = d.toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"short"});
+  const pace = paceText(plan.weekly);
+  let lifts = "";
+  if (session) {
+    lifts = session.items.map(item => {
+      const key = today()+"|"+item.id;
+      const done = state.logs[key]||0;
+      const dots = Array.from({length:item.sets}, (_,n)=>`<button data-log="${esc(key)}" data-i="${n}" data-sets="${item.sets}" class="${done>n?"on":""}">${n+1}</button>`).join("");
+      return `<div class="card"><b>${esc(item.name)}</b><div class="muted">${item.sets} × ${item.reps} · ${item.rest}s</div><div class="sets">${dots}</div></div>`;
+    }).join("");
+  } else lifts = `<div class="card">Rest. Same protein. Walk if you want, then leave it.</div>`;
+  const next = plan.sessions[(weekday()+1)%7];
+  return `<p class="muted">${label}</p><h1 style="font-size:2.1rem">${session?esc(session.name):"Rest"}</h1>
+    <p class="muted">${plan.title?esc(plan.title)+" · ":""}Week ${plan.week}${plan.deload?" · deload":""}</p>
+    <div class="grid3" style="margin-top:1rem"><div class="stat"><b>${plan.kcal.toLocaleString("en-AU")}</b><span class="faint">kcal</span></div><div class="stat"><b>${plan.protein}g</b><span class="faint">protein</span></div><div class="stat"><b>${pace}</b><span class="faint">pace</span></div></div>
+    ${lifts}
+    <div class="card"><span class="faint">Tomorrow</span><div>${next?esc(next.name):"Rest"}</div></div>`;
+}
+function paceText(weekly){ const abs=Math.abs(weekly); if (abs<0.05) return "Hold"; return (weekly<0?"−":"+")+abs.toFixed(1)+" kg"; }
+function weekView(plan) {
+  const i = weekday();
+  const days = WEEK.map((name, idx) => {
+    const s = plan.sessions[idx];
+    const lines = s ? s.items.map(it => `<div class="row"><span>${esc(it.name)}</span><span class="faint">${it.sets}×${it.reps}</span></div>`).join("") : `<p class="muted">Rest</p>`;
+    return `<div class="card"><span class="faint">${name}${idx===i?" · today":""}</span><h2>${s?esc(s.name):"Rest"}</h2>${lines}</div>`;
+  }).join("");
+  return `<h1 style="font-size:2.1rem">The week</h1><p class="muted">When every set hits the top of the range with reps left, add a little weight next time. Week 6 is a deload.</p>${days}`;
+}
+function eatView(plan) {
+  const list = meals(plan).map(([slot, text]) => `<div class="card"><span class="faint">${slot}</span><div>${esc(text)}</div></div>`).join("");
+  const rules = eatMode==="simple"
+    ? `<div class="card">Palm of protein at each meal. Two fists of vegetables. One fist of carbs at lunch and dinner. A thumb of fat.</div><div class="card">Lift days: eat the snack within two hours after training.</div>`
+    : list;
+  return `<h1 style="font-size:2.1rem">Eat</h1><p class="muted">${plan.kcal.toLocaleString("en-AU")} kcal · ${plan.protein} g protein · ${plan.carbs} g carbs · ${plan.fat} g fat</p>
+    <div class="grid2" style="margin-top:.8rem"><button class="choice ${eatMode==="simple"?"on":""}" id="simple">Simple</button><button class="choice ${eatMode==="specific"?"on":""}" id="grams">In grams</button></div>
+    ${rules}`;
+}
+function youView() {
+  const held = PRIZES.find(p => p.id===state.prize);
+  const weights = state.weights.map(w => `<div class="row"><span>${w.date}</span><span>${w.kg} kg</span></div>`).join("");
+  return `<h1 style="font-size:2.1rem">You</h1>
+    <div class="card"><span class="kicker">The Swing</span><h2>${held?esc(held.name):"No prize yet"}</h2><p class="muted">${held?esc(held.detail):"Ten swings. Tap the slot. A better score can change the week."}</p><p class="faint">Best ${state.best}/20</p><button class="btn" id="play" style="margin-top:.8rem">Play The Swing</button></div>
+    <div class="card"><h2>Scale</h2><p class="muted">Same conditions, 2–3 mornings a week. Offset ${state.offset||0} kcal.</p>
+      <div class="row" style="gap:.4rem;margin-top:.5rem"><input id="wkg" inputmode="decimal" placeholder="kg" style="width:5rem;height:2.8rem;border-radius:.7rem;border:1px solid var(--line);background:var(--bg);padding:0 .5rem"><button class="pill" id="addw">Add</button></div>
+      ${weights}</div>
+    <button class="ghost" id="edit">Change my answers</button>
+    <button class="ghost" id="reset">Erase this device</button>
+    <p class="muted">General training education, not medical advice. Sharp joint pain ends the set.</p>`;
+}
+function onboard() {
+  if (step===0 && !editing) return `<p class="kicker">Workout · diet</p><div class="hero"></div><h1 style="font-size:3rem;margin-top:1rem">Jackson's<br>Guide</h1><p class="muted">One file. Opens in Safari. No login. Your plan stays on this device.</p><div class="card">Lifts for a gym, dumbbells, or none.</div><div class="card">Food as a plate, or in grams.</div><div class="card">The Swing is a timing game. Play it well and the week can change.</div><div style="margin-top:1rem"><button class="btn" id="start">Build my plan</button></div>`;
+  const screens = [
+    () => `<h1>Your numbers</h1><div class="grid2"><button class="choice ${draft.sex==="female"?"on":""}" data-set="sex" data-v="female">Female</button><button class="choice ${draft.sex==="male"?"on":""}" data-set="sex" data-v="male">Male</button></div><label class="field"><span>Age</span><input id="age" value="${esc(draft.age)}"></label><label class="field"><span>Height cm</span><input id="height" value="${esc(draft.height)}"></label><label class="field"><span>Weight kg</span><input id="weight" value="${esc(draft.weight)}"></label>`,
+    () => choiceBlock("How weight behaves","frame",[["hard","Hard gainer","The scale is stubborn."],["athletic","Builds readily","Muscle shows when you train."],["easy","Holds weight","Fat arrives faster than you'd like."],["unsure","Not sure","We'll use the middle path."]]),
+    () => choiceBlock("What you want","goal",[["cut","Lose fat","A moderate deficit. Lifting stays serious."],["build","Build muscle","A small surplus."],["recomp","Recomp","Lose some fat and build some muscle."],["gain","Gain weight","Eat more on purpose."]]),
+    () => `<h1>The week</h1><p class="muted">Days you can lift</p><div class="grid3">${[2,3,4,5,6].map(n=>`<button class="choice ${draft.days===n?"on":""}" data-set="days" data-v="${n}">${n}</button>`).join("")}</div>
+      ${choiceBlock("Experience","level",[["new","New to lifting",""],["some","About a year",""],["trained","Training hard",""]], true)}
+      ${choiceBlock("Kit","gear",[["gym","Full gym",""],["dumbbells","Dumbbells at home",""],["bodyweight","Bodyweight only",""]], true)}
+      ${choiceBlock("Outside the gym","life",[["desk","Mostly sitting",""],["feet","On my feet",""],["labour","Hard physical work",""]], true)}`
+  ];
+  return `<button class="ghost" id="back" style="width:auto">Back</button><p class="faint">${step} of 4</p>${screens[step-1]()}<div style="margin-top:1rem"><button class="btn" id="next">Continue</button></div>`;
+}
+function choiceBlock(title, key, items, bare) {
+  const head = bare ? `<p class="muted" style="margin-top:1rem">${title}</p>` : `<h1>${title}</h1>`;
+  return head + items.map(([v,t,b]) => `<button class="choice ${draft[key]===v?"on":""}" data-set="${key}" data-v="${v}"><b>${t}</b>${b?`<div class="muted">${b}</div>`:""}</button>`).join("");
+}
+function bindOnboard() {
+  const go = id => document.getElementById(id);
+  if (go("start")) go("start").onclick = () => { step = 1; render(); };
+  if (go("back")) go("back").onclick = () => { if (step<=1) { editing=false; step=0; } else step--; render(); };
+  document.querySelectorAll("[data-set]").forEach(btn => btn.onclick = () => {
+    const k = btn.dataset.set; draft[k] = k==="days" ? Number(btn.dataset.v) : btn.dataset.v; render();
+  });
+  if (go("next")) go("next").onclick = () => {
+    ["age","height","weight"].forEach(id => { const el=go(id); if (el) draft[id]=el.value; });
+    if (step < 4) { step++; render(); return; }
+    const age = Number(draft.age), heightCm = Number(draft.height), weightKg = Number(draft.weight);
+    if (!draft.sex || !draft.frame || !draft.goal || !draft.level || !draft.gear || !draft.life) return;
+    if (!(age>=16 && age<=80 && heightCm>=130 && heightCm<=230 && weightKg>=40 && weightKg<=250)) { alert("Check age, height, and weight."); return; }
+    state.profile = {sex:draft.sex,age,heightCm,weightKg,frame:draft.frame,goal:draft.goal,level:draft.level,days:draft.days,gear:draft.gear,life:draft.life};
+    if (!editing) state.started = today();
+    editing = false; step = 0; save(); render();
+  };
+}
+function bindApp() {
+  document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { tab=b.dataset.tab; render(); });
+  const prize = document.getElementById("prize");
+  if (prize) prize.onclick = () => { swing = {phase:"ready"}; render(); };
+  document.querySelectorAll("[data-log]").forEach(b => b.onclick = () => {
+    const key = b.dataset.log, i = Number(b.dataset.i), sets = Number(b.dataset.sets);
+    const cur = state.logs[key]||0;
+    state.logs[key] = cur===i+1 ? i : Math.min(sets, i+1);
+    save(); render();
+  });
+  const simple = document.getElementById("simple"), grams = document.getElementById("grams");
+  if (simple) simple.onclick = () => { eatMode="simple"; render(); };
+  if (grams) grams.onclick = () => { eatMode="specific"; render(); };
+  const play = document.getElementById("play");
+  if (play) play.onclick = () => { swing = {phase:"ready"}; render(); };
+  const addw = document.getElementById("addw");
+  if (addw) addw.onclick = () => {
+    const kg = Number(document.getElementById("wkg").value);
+    if (kg>=40 && kg<=250) { state.weights = state.weights.filter(w => w.date!==today()).concat([{date:today(),kg}]).sort((a,b)=>a.date.localeCompare(b.date)); save(); render(); }
+  };
+  const edit = document.getElementById("edit");
+  if (edit) edit.onclick = () => { editing = true; step = 1; Object.assign(draft, state.profile, {age:String(state.profile.age),height:String(state.profile.heightCm),weight:String(state.profile.weightKg)}); render(); };
+  const reset = document.getElementById("reset");
+  if (reset) reset.onclick = () => { localStorage.removeItem(KEY); location.reload(); };
+}
+function prizeFor(score){ if(score>=14) return "anvil"; if(score>=11) return "classic"; if(score>=8) return "ember"; if(score>=5) return "plate"; return "badge"; }
+function swingView() {
+  if (swing.phase==="ready") {
+    const rows = [...PRIZES].reverse().map(p => `<div class="card row"><span><b>${esc(p.name)}</b><div class="muted">${esc(p.detail)}</div></span><span class="faint">${p.need}</span></div>`).join("");
+    return `<div class="row"><span class="kicker">Prize · The Swing</span><button class="ghost" id="close" style="width:auto">Close</button></div><h1 style="font-size:2rem;margin-top:.6rem">Time the bell</h1><p class="muted">Ten swings. Tap when the bell is in the slot. Tight hit is 2, loose hit is 1. Three misses and the set ends.</p>${rows}<p class="faint">Best ${state.best}/20</p><button class="btn" id="go" style="margin-top:1rem">Start the set</button>`;
+  }
+  if (swing.phase==="done") {
+    const earned = PRIZES.find(p => p.id===prizeFor(swing.score));
+    return `<p class="kicker">${swing.dropped?"Bell dropped":"Set done"}</p><h1 style="font-size:2.2rem">${esc(earned.name)}</h1><p class="muted">${swing.score} out of 20. ${esc(earned.detail)}</p><button class="btn" id="again" style="margin-top:1rem">Play again</button><button class="ghost" id="close">Back to the guide</button>`;
+  }
+  return `<div class="row"><div><p class="faint">Score</p><h1 id="score" style="font-size:2.4rem">0</h1></div><div style="text-align:right"><p class="muted">Swing <span id="rep">1</span> of 10</p><p class="lives" id="lives"><i class="on"></i><i class="on"></i><i class="on"></i></p></div></div><button id="arena" aria-label="Tap the slot"></button><p id="word" style="text-align:center;color:var(--copper);font-size:1.4rem">Tap the slot</p>`;
+}
+function bindSwing() {
+  const close = document.getElementById("close");
+  if (close) close.onclick = () => { stopSwing(); swing=null; render(); };
+  const go = document.getElementById("go");
+  if (go) go.onclick = () => { swing = {phase:"live"}; render(); startLoop(); };
+  const again = document.getElementById("again");
+  if (again) again.onclick = () => { swing = {phase:"live"}; render(); startLoop(); };
+  if (swing && swing.phase==="live") startLoop();
+}
+let raf = 0, sim = null;
+function stopSwing(){ cancelAnimationFrame(raf); sim = null; }
+function startLoop() {
+  stopSwing();
+  sim = {score:0,rep:0,lives:3,latched:false,wasHot:false,period:2100,phase:0,done:false};
+  const arena = document.getElementById("arena");
+  if (!arena) return;
+  arena.innerHTML = `<div id="arm" style="position:absolute;top:7%;left:50%;height:74%;width:4rem;transform-origin:top center;display:flex;flex-direction:column;align-items:center"><div style="width:4px;flex:1;background:var(--copper);border-radius:9px"></div><div style="width:3.2rem;height:2.6rem;background:#1a120c;border-radius:1rem 1rem 1.2rem 1.2rem;border:3px solid var(--copper)"></div></div><div id="slot" style="position:absolute;bottom:12%;left:50%;transform:translateX(-50%);width:7rem;height:2.4rem;border:2px solid var(--line);border-bottom:0;border-radius:2rem 2rem 0 0"></div>`;
+  const arm = document.getElementById("arm"), slot = document.getElementById("slot");
+  let last = performance.now();
+  const finish = () => {
+    if (!sim || sim.done) return; sim.done = true; cancelAnimationFrame(raf);
+    const earned = prizeFor(sim.score);
+    if (!state.prize || RANK.indexOf(earned) >= RANK.indexOf(state.prize)) state.prize = earned;
+    state.best = Math.max(state.best||0, sim.score);
+    save();
+    swing = {phase:"done", score:sim.score, dropped:sim.lives<=0};
+    render();
+  };
+  const tick = now => {
+    if (!sim || sim.done) return;
+    const dt = Math.min(32, now-last); last = now;
+    sim.phase += (Math.PI*2/sim.period)*dt;
+    const angle = Math.cos(sim.phase)*58;
+    const hot = Math.abs(angle) < 20;
+    if (sim.wasHot && !hot && !sim.latched) {
+      sim.rep++; sim.lives--; sim.latched = false;
+      const rep = document.getElementById("rep"), word = document.getElementById("word"), lives = document.getElementById("lives");
+      if (rep) rep.textContent = Math.min(sim.rep+1,10);
+      if (word) word.textContent = "Dropped";
+      if (lives) lives.innerHTML = [0,1,2].map(n => `<i class="${n<sim.lives?"on":""}"></i>`).join("");
+      sim.period = Math.max(980, sim.period*0.92);
+      if (sim.lives<=0 || sim.rep>=10) return finish();
+    }
+    if (sim.wasHot && !hot) sim.latched = false;
+    sim.wasHot = hot;
+    arm.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+    slot.style.borderColor = hot ? "#e07a3d" : "#343026";
+    slot.style.background = hot ? "rgba(224,122,61,.28)" : "transparent";
+    raf = requestAnimationFrame(tick);
+  };
+  arena.onpointerdown = e => {
+    e.preventDefault();
+    if (!sim || sim.done) return;
+    const angle = Math.cos(sim.phase)*58;
+    if (Math.abs(angle)<20 && !sim.latched) {
+      sim.latched = true;
+      sim.score += Math.abs(angle)<7 ? 2 : 1;
+      sim.rep++;
+      document.getElementById("score").textContent = sim.score;
+      document.getElementById("rep").textContent = Math.min(sim.rep+1,10);
+      document.getElementById("word").textContent = Math.abs(angle)<7 ? "Clean" : "In";
+      sim.period = Math.max(980, sim.period*0.9);
+      if (sim.rep>=10) finish();
+    } else if (Math.abs(angle)>=20) document.getElementById("word").textContent = "Early";
+  };
+  raf = requestAnimationFrame(tick);
+}
+render();
+</script>
+</body>
+</html>
